@@ -1,3 +1,4 @@
+Иван золо, [23.07.2025 3:07]
 <!DOCTYPE html>
 <html lang="uk">
 <head>
@@ -110,15 +111,17 @@
             box-shadow: none;
         }
         .user-id-display {
-
-padding: 0.75rem 1.5rem;
+            padding: 0.75rem 1.5rem;
             background-color: #6c757d;
             color: white;
             font-size: 0.875rem;
             text-align: center;
             border-top-left-radius: 1.5rem;
             border-top-right-radius: 1.5rem;
-            word-break: break-all; /* Дозволяє розрив довгих ID */
+            word-break: break-all; /*
+
+Иван золо, [23.07.2025 3:07]
+Дозволяє розрив довгих ID */
         }
         /* Адаптивний дизайн для мобільних пристроїв */
         @media (max-width: 640px) {
@@ -170,8 +173,12 @@ padding: 0.75rem 1.5rem;
         import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Глобальні змінні, надані середовищем Canvas
-        const appId = typeof app_id !== 'undefined' ? app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof firebase_config !== 'undefined' ? firebase_config : '{}');
+        // Перевіряємо, чи визначені змінні __app_id та __firebase_config
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+        console.log('App ID:', appId);
+        console.log('Firebase Config:', firebaseConfig);
 
         let app;
         let db;
@@ -199,25 +206,38 @@ padding: 0.75rem 1.5rem;
                 messageBubble.classList.add('received');
             }
 
-            messageBubble.innerHTML = 
+            messageBubble.innerHTML = `
                 <div class="message-sender">${senderId === userId ? 'Ви' : senderId} <span class="text-gray-400 text-xs">${timestamp}</span></div>
                 <div class="message-content">${messageContent}</div>
-            ;
+            `;
             messagesDiv.appendChild(messageBubble);
             messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка донизу
-          // Ініціалізація Firebase та аутентифікація
+        }
+
+        // Ініціалізація Firebase та аутентифікація
         async function initializeFirebase() {
+            console.log('Початок ініціалізації Firebase...');
             try {
+                if (Object.keys(firebaseConfig).length
+
+Иван золо, [23.07.2025 3:07]
+=== 0) {
+                    console.error("Firebase Config порожній. Переконайтеся, що __firebase_config визначено.");
+                    userIdDisplay.textContent = `Помилка: Firebase Config відсутній`;
+                    return;
+                }
+
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
+                console.log('Firebase ініціалізовано успішно.');
 
                 // Слухач зміни стану аутентифікації
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         // Користувач увійшов
                         userId = user.uid;
-                        userIdDisplay.textContent = Ваш ID: ${userId};
+                        userIdDisplay.textContent = `Ваш ID: ${userId}`;
                         console.log('Користувач увійшов:', userId);
 
                         // Після успішної аутентифікації, починаємо слухати повідомлення
@@ -227,30 +247,38 @@ padding: 0.75rem 1.5rem;
                         console.log('Користувач не увійшов. Спроба анонімного входу...');
                         try {
                             // Спроба входу за допомогою custom token, якщо доступний
-                            const initialAuthToken = typeof initial_auth_token !== 'undefined' ? initial_auth_token : null;
+                            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
                             if (initialAuthToken) {
+                                console.log('Спроба входу за допомогою custom token...');
                                 await signInWithCustomToken(auth, initialAuthToken);
                             } else {
                                 // Якщо custom token недоступний, входимо анонімно
+                                console.log('Спроба анонімного входу...');
                                 await signInAnonymously(auth);
                             }
                         } catch (error) {
                             console.error("Помилка анонімного входу або входу за токеном:", error);
-                            userIdDisplay.textContent = Помилка аутентифікації;
+                            userIdDisplay.textContent = `Помилка аутентифікації: ${error.message}`;
                         }
                     }
                 });
             } catch (error) {
-                console.error("Помилка ініціалізації Firebase:", error);
-                userIdDisplay.textContent = Помилка ініціалізації Firebase;
+                console.error("Критична помилка ініціалізації Firebase:", error);
+                userIdDisplay.textContent = `Критична помилка Firebase: ${error.message}`;
             }
         }
 
         // Налаштування слухача повідомлень Firestore
         function setupMessageListener() {
+            if (!db || !auth.currentUser) {
+                console.warn("Firestore або користувач не готовий для слухача повідомлень.");
+                return;
+            }
             // Шлях до публічної колекції для повідомлень
-            const messagesCollectionRef = collection(db, artifacts/${appId}/public/data/messages);
+            const messagesCollectionRef = collection(db, `artifacts/${appId}/public/data/messages`);
             const q = query(messagesCollectionRef); // Можна додати orderBy, якщо потрібно сортування за часом
+
+            console.log('Налаштування слухача повідомлень для колекції:', `artifacts/${appId}/public/data/messages`);
 
             onSnapshot(q, (snapshot) => {
                 messagesDiv.innerHTML = ''; // Очищаємо чат перед оновленням
@@ -268,28 +296,38 @@ padding: 0.75rem 1.5rem;
                 });
 
                 messages.forEach(msg => addMessageToChat(msg));
+                console.log('Повідомлення оновлено:', messages.length);
             }, (error) => {
-                console.error("Помилка слухача повідомлень:", error);
+                console.error("Помилка слухача повідомлень Firestore:", error);
             });
         }
 
         // Обробник відправки повідомлення
-        sendButton.addEventListener('click', async () => {
+        sendButton.addEventListener('click
+
+Иван золо, [23.07.2025 3:07]
+', async () => {
             const messageText = messageInput.value.trim();
-            if (messageText && userId !== 'Завантаження...' && userId !== 'Помилка аутентифікації') {
-                try {
-                    await addDoc(collection(db, artifacts/${appId}/public/data/messages), {
-                        text: messageText,
-                        senderId: userId,
-                        timestamp: serverTimestamp() // Часова мітка сервера
-                    });
-                    messageInput.value = ''; // Очистити поле вводу} catch (e) {
-                    console.error("Помилка додавання документа: ", e);
-                }
-            } else if (!messageText) {
+            if (!messageText) {
                 console.warn("Повідомлення не може бути порожнім.");
-            } else {
-                console.warn("Користувач не аутентифікований або ID не визначено.");
+                return;
+            }
+            if (!userId || userId === 'Завантаження...' || userId === 'Помилка аутентифікації') {
+                console.warn("Користувач не аутентифікований або ID не визначено. Не можу надіслати повідомлення.");
+                return;
+            }
+
+            try {
+                console.log('Відправка повідомлення:', messageText, 'від', userId);
+                await addDoc(collection(db, `artifacts/${appId}/public/data/messages`), {
+                    text: messageText,
+                    senderId: userId,
+                    timestamp: serverTimestamp() // Часова мітка сервера
+                });
+                messageInput.value = ''; // Очистити поле вводу
+                console.log('Повідомлення успішно надіслано.');
+            } catch (e) {
+                console.error("Помилка додавання документа до Firestore: ", e);
             }
         });
 
@@ -299,7 +337,6 @@ padding: 0.75rem 1.5rem;
                 sendButton.click();
             }
         });
-
 
         // Ініціалізуємо Firebase при завантаженні вікна
         window.onload = initializeFirebase;
